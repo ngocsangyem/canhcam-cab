@@ -4,26 +4,35 @@ import path from 'path';
 import del from 'del';
 import imagemin from 'gulp-imagemin';
 
-module.exports = function(gulp, setgulp, plugins, config, target, browserSync) {
-    let url = config;
-    let dest = path.join(target);
+const {
+	gulp,
+	config,
+	taskTarget,
+} = require('../utils');
 
-    // Run task
+let url = config;
+let dest = path.join(taskTarget);
 
-    gulp.task('imagemin', () => {
+// Run task
 
-        return gulp.src(path.join(target, '**/.{gif,png,jpg,jpeg,bmp,svg}'))
-            .pipe(imagemin([
-                imagemin.gifsicle({ interlaced: true }),
-                imagemin.jpegtran({ progressive: true }),
-                imagemin.optipng({ optimizationLevel: 7 }),
-                imagemin.svgo({ plugins: [{ removeViewBox: true }] })
-            ], {
-                verbose: true
-            }))
-            // .pipe(plugins.changed(dest))
-            .pipe(gulp.dest(dest));
-
-    });
-
-}
+gulp.task('imagemin', () => {
+	return (
+		gulp
+			.src(path.join(taskTarget, '**/.{gif,png,jpg,jpeg,bmp,svg}'))
+			.pipe(
+				imagemin(
+					[
+						imagemin.gifsicle({ interlaced: true }),
+						imagemin.jpegtran({ progressive: true }),
+						imagemin.optipng({ optimizationLevel: 7 }),
+						imagemin.svgo({ plugins: [{ removeViewBox: true }] }),
+					],
+					{
+						verbose: true,
+					}
+				)
+			)
+			// .pipe(plugins.changed(dest))
+			.pipe(gulp.dest(dest))
+	);
+});

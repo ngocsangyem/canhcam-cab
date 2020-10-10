@@ -1,0 +1,13 @@
+'use strict';
+
+import connect from 'gulp-connect-php';
+
+const { gulp, config, taskTarget } = require('../utils');
+
+gulp.task('php', () => {
+	connect.server({
+		base: taskTarget,
+		port: config.proxy,
+		keepalive: true,
+	});
+});

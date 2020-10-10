@@ -6,77 +6,92 @@ import foldero from 'foldero';
 import pug from 'pug';
 import yaml from 'js-yaml';
 
-module.exports = function (gulp, setgulp, plugins, config, target, browserSync) {
-	let url = config;
-	let dest = path.join('tmppug');
-	let destjade = path.join(target, 'template');
-	let dataPath = path.join(url.src, url.data);
-	let dataPathJS = path.join(url.src, url.dataJS);
+const {
+	gulp,
+	plugins,
+	args,
+	config,
+	taskTarget,
+} = require('../utils');
 
-	// Jade template compile
-	gulp.task('pug-dev', ['pug-copy-dev', 'pug-insert-dev'], () => {
+let url = config;
+let dest = path.join('tmppug');
+let destjade = path.join(taskTarget, 'template');
+let dataPath = path.join(url.src, url.data);
+let dataPathJS = path.join(url.src, url.dataJS);
 
-		let siteData = {};
-		let siteDataJS = '';
-		if (fs.existsSync(dataPath)) {
-			// Convert directory to JS Object
-			siteData = foldero(dataPath, {
-				recurse: true,
-				whitelist: '(.*/)*.+\.(json|ya?ml)$',
-				loader: function loadAsString(file) {
-					let json = {};
-					try {
-						if (path.extname(file).match(/^.ya?ml$/)) {
-							json = yaml.safeLoad(fs.readFileSync(file, 'utf8'));
-						} else {
-							json = JSON.parse(fs.readFileSync(file, 'utf8'));
-						}
-					} catch (e) {
-						console.log('Error Parsing JSON file: ' + file);
-						console.log('==== Details Below ====');
-						console.log(e);
+// Jade template compile
+gulp.task('pug-dev', gulp.series('pug-copy-dev', 'pug-insert-dev'), () => {
+	let siteData = {};
+	let siteDataJS = '';
+	if (fs.existsSync(dataPath)) {
+		// Convert directory to JS Object
+		siteData = foldero(dataPath, {
+			recurse: true,
+			whitelist: '(.*/)*.+.(json|ya?ml)$',
+			loader: function loadAsString(file) {
+				let json = {};
+				try {
+					if (path.extname(file).match(/^.ya?ml$/)) {
+						json = yaml.safeLoad(fs.readFileSync(file, 'utf8'));
+					} else {
+						json = JSON.parse(fs.readFileSync(file, 'utf8'));
 					}
-					return json;
+				} catch (e) {
+					console.log('Error Parsing JSON file: ' + file);
+					console.log('==== Details Below ====');
+					console.log(e);
 				}
-			});
-		}
+				return json;
+			},
+		});
+	}
 
-		if (fs.existsSync(dataPathJS)) {
-			// Convert directory to JS Object
-			siteDataJS = foldero(dataPathJS, {
-				recurse: true,
-				whitelist: 'config.js',
-				loader: function loadAsString(file) {
-					let json = {};
-					try {
-						json = JSON.parse('{' + fs.readFileSync(file, 'utf8').replace(/const\sCANHCAM_APP\s=/g, '"CANHCAM_APP" :') + '}');
-
-					} catch (e) {
-						console.log('Error Parsing JSON file: ' + file);
-						console.log('==== Details Below ====');
-						console.log(e);
-					}
-					return json;
+	if (fs.existsSync(dataPathJS)) {
+		// Convert directory to JS Object
+		siteDataJS = foldero(dataPathJS, {
+			recurse: true,
+			whitelist: 'config.js',
+			loader: function loadAsString(file) {
+				let json = {};
+				try {
+					json = JSON.parse(
+						'{' +
+							fs
+								.readFileSync(file, 'utf8')
+								.replace(
+									/const\sCANHCAM_APP\s=/g,
+									'"CANHCAM_APP" :'
+								) +
+							'}'
+					);
+				} catch (e) {
+					console.log('Error Parsing JSON file: ' + file);
+					console.log('==== Details Below ====');
+					console.log(e);
 				}
-			});
-		}
+				return json;
+			},
+		});
+	}
 
-		// Add --debug option to your gulp task to view
-		// what data is being loaded into your templates
-		if (setgulp.debug) {
-			console.log('==== DEBUG: site.data being injected to templates ====');
-			console.log(siteData);
-			console.log('\n==== DEBUG: package.json config being injected to templates ====');
-			console.log(config);
-		}
+	// Add --debug option to your gulp task to view
+	// what data is being loaded into your templates
+	if (args.debug) {
+		console.log('==== DEBUG: site.data being injected to templates ====');
+		console.log(siteData);
+		console.log(
+			'\n==== DEBUG: package.json config being injected to templates ===='
+		);
+		console.log(config);
+	}
 
-		return gulp.src([
-			'tmppug/**/index.pug',
-			'!tmppug/{**/\_*,**/\_*/**}'
-		])
-			.pipe(plugins.changed(destjade))
-			.pipe(plugins.plumber())
-			.pipe(plugins.pug({
+	return gulp
+		.src(['tmppug/**/index.pug', '!tmppug/{**/_*,**/_*/**}'])
+		.pipe(plugins.changed(destjade))
+		.pipe(plugins.plumber())
+		.pipe(
+			plugins.pug({
 				pug: pug,
 				pretty: true,
 				locals: {
@@ -86,16 +101,18 @@ module.exports = function (gulp, setgulp, plugins, config, target, browserSync) 
 					//     data: siteData,
 					//     dataJS: siteDataJS
 					// }
-				}
-			}))
-			.pipe(plugins.htmlmin({
+				},
+			})
+		)
+		.pipe(
+			plugins.htmlmin({
 				collapseBooleanAttributes: true,
 				conservativeCollapse: true,
 				removeCommentsFromCDATA: true,
 				removeEmptyAttributes: true,
-				removeRedundantAttributes: true
-			}))
-			.pipe(gulp.dest(destjade))
-		// .on('end', browserSync.reload);
-	});
-}
+				removeRedundantAttributes: true,
+			})
+		)
+		.pipe(gulp.dest(destjade));
+	// .on('end', browserSync.reload);
+});
